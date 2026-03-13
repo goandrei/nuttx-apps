@@ -72,3 +72,11 @@
 #define HAVE_CHACHA
 #define HAVE_ENCRYPT_THEN_MAC
 #define NO_OLD_TLS
+
+//quic
+#define WOLFSSL_QUIC
+#define OPENSSL_EXTRA
+#define NO_INT128
+#define HAVE___UINT128_T 0
+#define WOLFSSL_OPTIONS_H
+#undef OPENSSL_COEXIST

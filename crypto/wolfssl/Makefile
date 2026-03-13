@@ -39,6 +39,7 @@ CSRCS += $(WOLFSSL_UNPACKNAME)/src/ssl.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/src/tls.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/src/tls13.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/src/wolfio.c
+CSRCS += $(WOLFSSL_UNPACKNAME)/src/quic.c
 
 # wolfCrypt Core (FIPS validated crypto available contact fips@wolfssl.com)
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/aes.c
@@ -98,7 +99,7 @@ CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_c32.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_c64.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_cortexm.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_dsp32.c
-CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_int.c
+#CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_int.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/sp_x86_64.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/tfm.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/wc_dsp.c
@@ -158,7 +159,8 @@ wolfssl:
 	git clone git@github.com:wolfSSL/wolfssl-examples.git $(WOLFSSL_EXAMPLESNAME)
 else
 wolfssl:
-	git clone git@github.com:wolfSSL/wolfssl.git $(WOLFSSL_UNPACKNAME)
+	git clone --depth 1 -b v$(WOLFSSL_VERSION)-stable git@github.com:wolfSSL/wolfssl.git $(WOLFSSL_UNPACKNAME)
+	touch $(WOLFSSL_UNPACKNAME)/wolfssl/options.h
 endif
 
 context:: wolfssl
@@ -168,7 +170,7 @@ distclean::
 	$(call DELDIR, $(WOLFSSL_UNPACKNAME))
 	$(call DELDIR, $(WOLFSSL_EXAMPLESNAME))
 else
-distclean:
+distclean::
 	$(call DELDIR, $(WOLFSSL_UNPACKNAME))
 endif
 

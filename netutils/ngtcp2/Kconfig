@@ -1,0 +1,19 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config NETUTILS_NGTCP2
+	bool "NGTCP2"
+	default n
+	imply CRYPTO_WOLFSSL
+	---help---
+		ngtcp2 is a C implementation of QUIC protocol based on RFC9000.
+
+if NETUTILS_NGTCP2
+
+config NGTCP2_VERSION
+	string "ngtcp2 version"
+	default "1.21.0"
+
+endif # NETUTILS_NGTCP2
