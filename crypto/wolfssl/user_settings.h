@@ -77,6 +77,6 @@
 #define WOLFSSL_QUIC
 #define OPENSSL_EXTRA
 #define NO_INT128
-#define HAVE___UINT128_T 0
+#undef HAVE___UINT128_T
 #define WOLFSSL_OPTIONS_H
 #undef OPENSSL_COEXIST
