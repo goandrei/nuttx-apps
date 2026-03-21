@@ -65,7 +65,7 @@ CFLAGS += ${INCDIR_PREFIX}$(NGHTTP3_UNPACKNAME)/lib
 CFLAGS += ${INCDIR_PREFIX}$(NGHTTP3_UNPACKNAME)/lib/includes
 
 # TODO : USE config.h
-CFLAGS += -DHAVE_ARPA_INET_H
+CFLAGS += -DHAVE_ARPA_INET_H -Wno-undef
 
 NGHTTP3_VERSION = $(patsubst "%",%,$(strip $(CONFIG_NGHTTP3_VERSION)))
 NGHTTP3_URL ?= "https://github.com/ngtcp2/nghttp3/releases/download"
