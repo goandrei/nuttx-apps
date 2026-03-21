@@ -28,10 +28,9 @@ LIBEV_GIT     = libev
 
 CSRCS  = ${LIBEV_PATH}/${LIBEV_GIT}/ev.c
 CSRCS += ${LIBEV_PATH}/${LIBEV_GIT}/event.c
-# TODO : add configurable backend
-CSRCS += ${LIBEV_PATH}/${LIBEV_GIT}/ev_select.c
 
 CFLAGS += ${INCDIR_PREFIX}${LIBEV_PATH}
+CFLAGS += -Wno-undef -Wno-unused-value -Wno-shadow
 
 ifeq ($(wildcard libev/.git),)
 libev:

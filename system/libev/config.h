@@ -11,7 +11,7 @@
 #define HAVE_DLFCN_H 1
 
 /* Define to 1 if you have the 'epoll_ctl' function. */
-/* #undef HAVE_EPOLL_CTL */
+/* #define HAVE_EPOLL_CTL */
 
 /* Define to 1 if you have the 'eventfd' function. */
 /* #undef HAVE_EVENTFD */
@@ -20,13 +20,13 @@
 #define HAVE_FLOOR 1
 
 /* Define to 1 if you have the 'inotify_init' function. */
-/* #undef HAVE_INOTIFY_INIT */
+#define HAVE_INOTIFY_INIT 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
 /* Define to 1 if you have the 'kqueue' function. */
-#define HAVE_KQUEUE 1
+/* #define HAVE_KQUEUE 1 */
 
 /* Define to 1 if you have the 'rt' library (-lrt). */
 /* #undef HAVE_LIBRT */
@@ -35,10 +35,10 @@
 #define HAVE_NANOSLEEP 1
 
 /* Define to 1 if you have the 'poll' function. */
-#define HAVE_POLL 1
+/* #define HAVE_POLL 1 */
 
 /* Define to 1 if you have the <poll.h> header file. */
-#define HAVE_POLL_H 1
+/* #define HAVE_POLL_H 1 */
 
 /* Define to 1 if you have the 'port_create' function. */
 /* #undef HAVE_PORT_CREATE */
@@ -47,7 +47,7 @@
 /* #undef HAVE_PORT_H */
 
 /* Define to 1 if you have the 'select' function. */
-#define HAVE_SELECT 1
+/* #define HAVE_SELECT 1 */
 
 /* Define to 1 if you have the 'signalfd' function. */
 /* #undef HAVE_SIGNALFD */
@@ -68,7 +68,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
-/* #undef HAVE_SYS_EPOLL_H */
+/*#define HAVE_SYS_EPOLL_H 1 */
 
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
 /* #undef HAVE_SYS_EVENTFD_H */
@@ -80,7 +80,7 @@
 #define HAVE_SYS_INOTIFY_H 1
 
 /* Define to 1 if you have the <sys/select.h> header file. */
-#define HAVE_SYS_SELECT_H 1
+/*#define HAVE_SYS_SELECT_H 1*/
 
 /* Define to 1 if you have the <sys/signalfd.h> header file. */
 /* #undef HAVE_SYS_SIGNALFD_H */
