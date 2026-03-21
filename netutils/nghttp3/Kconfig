@@ -1,0 +1,19 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config NETUTILS_NGHTTP3
+	bool "NETUTILS_NGHTTP3"
+	default n
+	imply NETUTILS_NGTCP2
+	---help---
+		nghttp3 is a C implementation of HTTP/3.
+
+if NETUTILS_NGHTTP3
+
+config NGHTTP3_VERSION
+	string "nghttp3 version"
+	default "1.15.0"
+
+endif # NETUTILS_NGHTTP3
