@@ -22,6 +22,8 @@
 
 include $(APPDIR)/Make.defs
 
+NGTCP2_UNPACKNAME = ngtcp2
+
 # ngtcp2 library
 CSRCS += $(NGTCP2_UNPACKNAME)/lib/ngtcp2_pkt.c
 CSRCS += $(NGTCP2_UNPACKNAME)/lib/ngtcp2_conv.c
@@ -73,10 +75,40 @@ CSRCS += $(NGTCP2_UNPACKNAME)/lib/ngtcp2_conn_info.c
 CSRCS += $(NGTCP2_UNPACKNAME)/crypto/shared.c
 CSRCS += $(NGTCP2_UNPACKNAME)/crypto/wolfssl/wolfssl.c
 
-# ngtcp2 examples
-# todo
 
-NGTCP2_UNPACKNAME = ngtcp2
+ifeq ($(CONFIG_NETUTILS_NGTCP2_EXAMPLEEE),y)
+CXXEXT := .cc
+
+# Client sources
+CXXSRCS += ngtcp2/examples/client.cc
+CXXSRCS += ngtcp2/examples/client_base.cc
+CXXSRCS += ngtcp2/examples/debug.cc
+CXXSRCS += ngtcp2/examples/util.cc
+CXXSRCS += ngtcp2/examples/shared.cc
+CXXSRCS += ngtcp2/examples/tls_client_context_wolfssl.cc
+CXXSRCS += ngtcp2/examples/tls_client_session_wolfssl.cc
+CXXSRCS += ngtcp2/examples/tls_session_base_wolfssl.cc
+CXXSRCS += ngtcp2/examples/util_wolfssl.cc
+
+# Server sources
+CXXSRCS += ngtcp2/examples/server.cc
+CXXSRCS += ngtcp2/examples/server_base.cc
+CXXSRCS += ngtcp2/examples/siphash.cc
+CXXSRCS += ngtcp2/examples/tls_server_context_wolfssl.cc
+CXXSRCS += ngtcp2/examples/tls_server_session_wolfssl.cc
+
+CXXFLAGS += -Ingtcp2/third-party
+CXXFLAGS += -Ingtcp2/third-party/urlparse
+CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/lib
+CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/lib/includes
+CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/crypto
+CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/crypto/includes
+
+CXXFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/netutils/nghttp3/nghttp3/lib/includes
+CXXFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/netutils/nghttp3/nghttp3/lib
+
+CXXFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/system/libev/libev
+endif
 
 # Compilation flags
 CFLAGS = ${INCDIR_PREFIX}$(APPDIR)$(DELIM)netutils$(DELIM)ngtcp2
@@ -134,16 +166,12 @@ endif
 
 context:: $(NGTCP2_UNPACKNAME)/lib/includes/ngtcp2/ngtcp2.h
 
-#ifeq ($(CONFIG_WOLFSSL_APP_CLIENT_SERVER),y)
-
-#PROGNAME  += $(CONFIG_WOLFSSL_APP_CLIENT_SERVER_PROGNAME)
-#PRIORITY  += $(CONFIG_WOLFSSL_APP_CLIENT_SERVER_PRIORITY)
-#STACKSIZE += $(CONFIG_WOLFSSL_APP_CLIENT_SERVER_STACKSIZE)
-
-#CFLAGS += -I$(WOLFSSL_UNPACKNAME)
-#CFLAGS += -I$(WOLFSSL_UNPACKNAME)/../ # To reach user_settings.h
-#MAINSRC += $(WOLFSSL_EXAMPLESNAME)/embedded/tls-client-server.c
-
-#endif
+ifeq ($(CONFIG_NETUTILS_NGTCP2_EXAMPLE),y)
+PROGNAME += ngtcp2client
+PRIORITY  = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY)
+STACKSIZE = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE)
+MODULE    = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE)
+MAINSRC   = ngtcp2/examples/simpleclient.c
+endif
 
 include $(APPDIR)/Application.mk
