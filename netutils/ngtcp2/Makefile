@@ -80,19 +80,19 @@ CFLAGS = ${INCDIR_PREFIX}$(APPDIR)$(DELIM)netutils$(DELIM)ngtcp2
 CFLAGS += -Wno-undef -mlongcalls
 
 # ngtcp2 specific includes
-CFLAGS += -I$(NGTCP2_UNPACKNAME)/lib
-CFLAGS += -I$(NGTCP2_UNPACKNAME)/lib/includes
-CFLAGS += -I$(NGTCP2_UNPACKNAME)/crypto
-CFLAGS += -I$(NGTCP2_UNPACKNAME)/crypto/includes
+CFLAGS += ${INCDIR_PREFIX}$(NGTCP2_UNPACKNAME)/lib
+CFLAGS += ${INCDIR_PREFIX}$(NGTCP2_UNPACKNAME)/lib/includes
+CFLAGS += ${INCDIR_PREFIX}$(NGTCP2_UNPACKNAME)/crypto
+CFLAGS += ${INCDIR_PREFIX}$(NGTCP2_UNPACKNAME)/crypto/includes
 
 # NuttX specific includes
-CFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx/include
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/../nuttx/include
 
 # wolfssl specific includes
-CFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/crypto/wolfssl
-CFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/crypto/wolfssl/wolfssl
-CFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/crypto/wolfssl/openssl
-CFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/include
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/crypto/wolfssl
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/crypto/wolfssl/wolfssl
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/crypto/wolfssl/openssl
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/include
 
 # Disable 128 bit ints to avoid compilation errors
 CFLAGS += -DNO_INT128 -DHAVE_WOLFSSL -DBUILDING_NGTCP2 -DWOLFSSL_QUIC -DOPENSSL_EXTRA -DHAVE_AESGCM -DHAVE_SESSION_TICKET
@@ -126,12 +126,14 @@ endif
 context:: $(NGTCP2_UNPACKNAME)/lib/includes/ngtcp2/ngtcp2.h
 
 ifeq ($(CONFIG_NETUTILS_NGTCP2_EXAMPLE),y)
-CFLAGS   += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/system/libuv/libuv/include
+
+CFLAGS   += ${INCDIR_PREFIX}$(APPDIR)/system/libuv/libuv/include
 PROGNAME += quic_client
 PRIORITY  = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY)
 STACKSIZE = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE)
 MODULE    = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE)
 MAINSRC   = quic_client.c
+
 endif
 
 include $(APPDIR)/Application.mk
