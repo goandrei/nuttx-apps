@@ -35,6 +35,8 @@
 
 /* Crypto */
 #define HAVE_ECC
+/* Ed25519 TLS 1.3 cert keys (openssl req -newkey ed25519); needs WOLFSSL_SHA512 */
+#define HAVE_ED25519
 #define ECC_TIMING_RESISTANT
 #define WC_RSA_BLINDING
 #undef  RSA_LOW_MEM
@@ -75,8 +77,24 @@
 
 //quic
 #define WOLFSSL_QUIC
+#define OPENSSL_ALL
 #define OPENSSL_EXTRA
+#define HAVE_CURVE25519
 #define NO_INT128
 #undef HAVE___UINT128_T
 #define WOLFSSL_OPTIONS_H
 #undef OPENSSL_COEXIST
+
+#define HAVE_ALPN
+#define HAVE_SNI
+#define WOLFSSL_AES_COUNTER
+#define WOLFSSL_AES_128
+#define WOLFSSL_AES_256
+#define WOLFSSL_EARLY_DATA
+#define HAVE_SESSION_TICKET
+#define WOLFSSL_AES_DIRECT 1
+//#define DEBUG_WOLFSSL 1
+
+// Skip certificate checking
+#define WOLFSSL_ALT_CERT_CHAINS 1
+#define WOLFSSL_TLS13 1
