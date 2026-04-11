@@ -75,44 +75,9 @@ CSRCS += $(NGTCP2_UNPACKNAME)/lib/ngtcp2_conn_info.c
 CSRCS += $(NGTCP2_UNPACKNAME)/crypto/shared.c
 CSRCS += $(NGTCP2_UNPACKNAME)/crypto/wolfssl/wolfssl.c
 
-
-ifeq ($(CONFIG_NETUTILS_NGTCP2_EXAMPLEEE),y)
-CXXEXT := .cc
-
-# Client sources
-CXXSRCS += ngtcp2/examples/client.cc
-CXXSRCS += ngtcp2/examples/client_base.cc
-CXXSRCS += ngtcp2/examples/debug.cc
-CXXSRCS += ngtcp2/examples/util.cc
-CXXSRCS += ngtcp2/examples/shared.cc
-CXXSRCS += ngtcp2/examples/tls_client_context_wolfssl.cc
-CXXSRCS += ngtcp2/examples/tls_client_session_wolfssl.cc
-CXXSRCS += ngtcp2/examples/tls_session_base_wolfssl.cc
-CXXSRCS += ngtcp2/examples/util_wolfssl.cc
-
-# Server sources
-CXXSRCS += ngtcp2/examples/server.cc
-CXXSRCS += ngtcp2/examples/server_base.cc
-CXXSRCS += ngtcp2/examples/siphash.cc
-CXXSRCS += ngtcp2/examples/tls_server_context_wolfssl.cc
-CXXSRCS += ngtcp2/examples/tls_server_session_wolfssl.cc
-
-CXXFLAGS += -Ingtcp2/third-party
-CXXFLAGS += -Ingtcp2/third-party/urlparse
-CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/lib
-CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/lib/includes
-CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/crypto
-CXXFLAGS += -I$(NGTCP2_UNPACKNAME)/crypto/includes
-
-CXXFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/netutils/nghttp3/nghttp3/lib/includes
-CXXFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/netutils/nghttp3/nghttp3/lib
-
-CXXFLAGS += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/system/libev/libev
-endif
-
 # Compilation flags
 CFLAGS = ${INCDIR_PREFIX}$(APPDIR)$(DELIM)netutils$(DELIM)ngtcp2
-CFLAGS += -Wno-undef
+CFLAGS += -Wno-undef -mlongcalls
 
 # ngtcp2 specific includes
 CFLAGS += -I$(NGTCP2_UNPACKNAME)/lib
@@ -147,18 +112,12 @@ $(NGTCP2_UNPACKNAME): $(NGTCP2_TAR)
 	$(Q) $(UNPACK) $(NGTCP2_TAR)
 	$(Q) mv ngtcp2-$(NGTCP2_VERSION) $(NGTCP2_UNPACKNAME)
 
-#CFLAGS='-isystem /Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx/include \
-#-I /Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/crypto/wolfssl \
-#-I /Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/crypto/wolfssl/wolfssl \
-#-I /Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/system/argtable3/argtable3/src \
-#-I /Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/include'
-
-# Download and unpack tarball if no git repo found
-ifeq ($(wildcard $(NGTCP2_UNPACKNAME)/.git),)
 distclean::
 	$(call DELDIR, $(NGTCP2_UNPACKNAME))
 	$(call DELFILE, $(NGTCP2_TAR))
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(NGTCP2_UNPACKNAME)/.git),)
 $(NGTCP2_UNPACKNAME)/lib/includes/ngtcp2/ngtcp2.h:: $(NGTCP2_UNPACKNAME)
 else
 $(NGTCP2_UNPACKNAME)/lib/includes/ngtcp2/ngtcp2.h::
@@ -167,11 +126,12 @@ endif
 context:: $(NGTCP2_UNPACKNAME)/lib/includes/ngtcp2/ngtcp2.h
 
 ifeq ($(CONFIG_NETUTILS_NGTCP2_EXAMPLE),y)
-PROGNAME += ngtcp2client
+CFLAGS   += -I/Users/agorneanu/personal/MasterPolitehnica/sem2/cercetare/nuttx-apps/system/libuv/libuv/include
+PROGNAME += quic_client
 PRIORITY  = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY)
 STACKSIZE = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE)
 MODULE    = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE)
-MAINSRC   = ngtcp2/examples/simpleclient.c
+MAINSRC   = quic_client.c
 endif
 
 include $(APPDIR)/Application.mk

@@ -6,7 +6,8 @@
 config NETUTILS_NGTCP2
 	bool "NGTCP2"
 	default n
-	imply CRYPTO_WOLFSSL
+	depends on CRYPTO_WOLFSSL
+	depends on LIBUV
 	---help---
 		ngtcp2 is a C implementation of QUIC protocol based on RFC9000.
 
@@ -18,7 +19,7 @@ config NGTCP2_VERSION
 
 config NETUTILS_NGTCP2_EXAMPLE
 	tristate "Example http3 server and client"
-	imply CONFIG_LIBEV
+	imply CONFIG_LIBUV
 	default n
 
 if NETUTILS_NGTCP2_EXAMPLE
