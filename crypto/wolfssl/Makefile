@@ -39,7 +39,6 @@ CSRCS += $(WOLFSSL_UNPACKNAME)/src/ssl.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/src/tls.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/src/tls13.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/src/wolfio.c
-CSRCS += $(WOLFSSL_UNPACKNAME)/src/quic.c
 
 # wolfCrypt Core (FIPS validated crypto available contact fips@wolfssl.com)
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/aes.c
@@ -47,7 +46,6 @@ CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/cmac.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/des3.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/dh.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/ecc.c
-CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/evp.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/hmac.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/random.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/rsa.c
@@ -110,6 +108,13 @@ CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/wc_port.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/wolfevent.c
 CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/wolfmath.c
 
+ifeq ($(CONFIG_NETUTILS_NGTCP2),y)
+
+CSRCS += $(WOLFSSL_UNPACKNAME)/src/quic.c
+CSRCS += $(WOLFSSL_UNPACKNAME)/wolfcrypt/src/evp.c
+
+endif
+
 CFLAGS += -DWOLFSSL_USER_SETTINGS
 
 ifneq ($(CONFIG_WOLFCRYPT_APPS),)
@@ -156,7 +161,7 @@ endif
 
 ifeq ($(CONFIG_WOLFSSL_APP_CLIENT_SERVER),y)
 wolfssl:
-	git clone git@github.com:wolfSSL/wolfssl.git $(WOLFSSL_UNPACKNAME)
+	git clone -b v$(WOLFSSL_VERSION)-stable git@github.com:wolfSSL/wolfssl.git $(WOLFSSL_UNPACKNAME)
 	git clone git@github.com:wolfSSL/wolfssl-examples.git $(WOLFSSL_EXAMPLESNAME)
 else
 wolfssl:
