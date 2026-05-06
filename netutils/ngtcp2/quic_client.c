@@ -38,7 +38,7 @@
 #include <uv.h>
 
 /* Peer address: IPv4 or IPv6 literal (no DNS). Change REMOTE_ADDR / REMOTE_PORT. */
-#define REMOTE_ADDR "192.168.0.162"
+#define REMOTE_ADDR "192.168.0.142"
 #define REMOTE_PORT "8888"
 #define ALPN "\x2h3"
 #define MESSAGE "GET /\r\n"

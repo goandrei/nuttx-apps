@@ -128,11 +128,11 @@ context:: $(NGTCP2_UNPACKNAME)/lib/includes/ngtcp2/ngtcp2.h
 ifeq ($(CONFIG_NETUTILS_NGTCP2_EXAMPLE),y)
 
 CFLAGS   += ${INCDIR_PREFIX}$(APPDIR)/system/libuv/libuv/include
-PROGNAME += quic_client
+PROGNAME += quic_server
 PRIORITY  = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY)
 STACKSIZE = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE)
 MODULE    = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE)
-MAINSRC   = quic_client.c
+MAINSRC   = quic_server.c
 
 endif
 
