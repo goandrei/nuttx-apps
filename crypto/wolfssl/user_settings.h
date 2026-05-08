@@ -93,7 +93,7 @@
 #define WOLFSSL_EARLY_DATA
 #define HAVE_SESSION_TICKET
 #define WOLFSSL_AES_DIRECT 1
-//#define DEBUG_WOLFSSL 1
+#define DEBUG_WOLFSSL 1
 
 // Skip certificate checking
 #define WOLFSSL_ALT_CERT_CHAINS 1
