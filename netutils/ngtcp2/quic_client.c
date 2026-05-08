@@ -605,6 +605,8 @@ static int client_quic_init(struct client *c,
     ngtcp2_settings_default(&settings);
 
     settings.initial_ts = timestamp();
+    // Give the server more time to respond
+    settings.initial_rtt = 1000 * NGTCP2_MILLISECONDS;
     settings.log_printf = log_printf;
 
     ngtcp2_transport_params_default(&params);
