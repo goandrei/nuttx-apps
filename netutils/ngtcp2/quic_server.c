@@ -118,6 +118,8 @@ struct server {
 
     ngtcp2_ccerr last_error;
 
+    void (*on_payload)(const uint8_t *data, size_t datalen);
+
     uv_poll_t handle;
     uv_timer_t timer;
 };
@@ -290,6 +292,10 @@ static int server_recv_stream_data(ngtcp2_conn *conn,
     if (s->stream.nread + datalen <= sizeof(s->stream.buf)) {
         memcpy(s->stream.buf + s->stream.nread, data, datalen);
         s->stream.nread += datalen;
+    }
+
+    if (s->on_payload) {
+        s->on_payload(data, datalen);
     }
 
     printf("Server received %zu bytes on stream %" PRId64 "\n", datalen, stream_id);
@@ -672,6 +678,10 @@ static ngtcp2_conn *get_conn(ngtcp2_crypto_conn_ref *conn_ref) {
     return s->conn;
 }
 
+void payload_handler(const uint8_t* data, size_t datalen) {
+    printf("Received payload : %s (lenght = %d)\n", data, datalen);
+}
+
 static int server_init(struct server *s) {
     struct sockaddr_storage local_addr;
     socklen_t local_addrlen = sizeof(local_addr);
@@ -695,6 +705,8 @@ static int server_init(struct server *s) {
         fprintf(stderr, "server_ssl_ctx_init() failed.\n");
         return -1;
     }
+
+    s->on_payload = payload_handler;
 
     s->stream.stream_id = -1;
     s->stream.nread = 0;
