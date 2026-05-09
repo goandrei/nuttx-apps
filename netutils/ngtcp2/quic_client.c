@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
@@ -38,10 +39,9 @@
 #include <uv.h>
 
 /* Peer address: IPv4 or IPv6 literal (no DNS). Change REMOTE_ADDR / REMOTE_PORT. */
-#define REMOTE_ADDR "192.168.0.142"
+#define REMOTE_ADDR "192.168.0.178"
 #define REMOTE_PORT "8888"
 #define ALPN "\x2h3"
-#define MESSAGE "GET /\r\n"
 
 /*
  * User data in a ngtcp2 connection
@@ -65,7 +65,9 @@ struct client {
     ngtcp2_ccerr last_error;
 
     uv_poll_t handle;
+    uv_poll_t stdin_handle;
     uv_timer_t timer;
+    char stdin_buf[4096];
 };
 
 /*
@@ -232,34 +234,11 @@ static int client_ssl_init(struct client *c) {
 static int extend_max_local_streams_bidi(ngtcp2_conn *conn,
                                          uint64_t max_streams,
                                          void *user_data) {
-#ifdef MESSAGE
-    struct client *c = user_data;
-    int rv;
-    int64_t stream_id;
-    (void)max_streams;
-
-    if (c->stream.stream_id != -1) {
-        return 0;
-    }
-
-    // Open a new bidirectional stream
-    rv = ngtcp2_conn_open_bidi_stream(conn, &stream_id, NULL);
-    if (rv != 0) {
-        return 0;
-    }
-
-    c->stream.stream_id = stream_id;
-    c->stream.data = (const uint8_t *)MESSAGE;
-    c->stream.datalen = sizeof(MESSAGE) - 1;
-
-    return 0;
-#else  /* !defined(MESSAGE) */
     (void)conn;
     (void)max_streams;
     (void)user_data;
 
     return 0;
-#endif /* !defined(MESSAGE) */
 }
 
 
@@ -362,12 +341,19 @@ static int client_send_packet(struct client *c, const uint8_t *data,
 static size_t client_get_message(struct client *c, int64_t *pstream_id,
                                  int *pfin, ngtcp2_vec *datav) {
 
-    if(c->stream.stream_id != -1 && c->stream.nwrite < c->stream.datalen) {
+    if (c->stream.stream_id != -1 && c->stream.nwrite < c->stream.datalen) {
         *pstream_id = c->stream.stream_id;
         *pfin = 1;
         datav->base = (uint8_t *)c->stream.data + c->stream.nwrite;
         datav->len = c->stream.datalen - c->stream.nwrite;
         return 1;
+    }
+
+    if (c->stream.stream_id != -1) {
+        c->stream.stream_id = -1;
+        c->stream.data = NULL;
+        c->stream.datalen = 0;
+        c->stream.nwrite = 0;
     }
 
     *pstream_id = -1;
@@ -457,6 +443,7 @@ static void client_close(struct client *c) {
     client_send_packet(c, buf, (size_t)nwrite);
 
 fin:
+    uv_poll_stop(&c->stdin_handle);
     uv_stop(uv_default_loop());
 }
 
@@ -491,6 +478,51 @@ static void read_cb(uv_poll_t* handle, int status, int events) {
         client_close(c);
         return;
     }
+
+    if (client_write(c) != 0) {
+        client_close(c);
+    }
+}
+
+static void stdin_read_cb(uv_poll_t* handle, int status, int events) {
+    struct client *c = handle->data;
+    ssize_t nread;
+
+    (void)status;
+    (void)events;
+
+    nread = read(0, c->stdin_buf, sizeof(c->stdin_buf) - 1);
+    if (nread <= 0) {
+        client_close(c);
+        return;
+    }
+
+    while (nread > 0 && (c->stdin_buf[nread-1] == '\n' ||
+                         c->stdin_buf[nread-1] == '\r')) {
+        c->stdin_buf[nread-1] = '\0';
+        nread--;
+    }
+
+    if (nread == 0) {
+        return;
+    }
+
+    if (c->stream.stream_id != -1) {
+        fprintf(stderr, "Previous stream still in progress, dropping input\n");
+        return;
+    }
+
+    int64_t stream_id;
+    int rv = ngtcp2_conn_open_bidi_stream(c->conn, &stream_id, NULL);
+    if (rv != 0) {
+        fprintf(stderr, "Failed to open stream: %s\n", ngtcp2_strerror(rv));
+        return;
+    }
+
+    c->stream.stream_id = stream_id;
+    c->stream.data = (const uint8_t *)c->stdin_buf;
+    c->stream.datalen = (size_t)nread;
+    c->stream.nwrite = 0;
 
     if (client_write(c) != 0) {
         client_close(c);
@@ -605,8 +637,6 @@ static int client_quic_init(struct client *c,
     ngtcp2_settings_default(&settings);
 
     settings.initial_ts = timestamp();
-    // Give the server more time to respond
-    settings.initial_rtt = 1000 * NGTCP2_MILLISECONDS;
     settings.log_printf = log_printf;
 
     ngtcp2_transport_params_default(&params);
@@ -680,7 +710,7 @@ static int client_init(struct client *c) {
     c->conn_ref.get_conn = get_conn;
     c->conn_ref.user_data = c;
 
-    // Initialize reader callback
+    // Initialize reader callback for QUIC socket
     uv_poll_init(uv_default_loop(), &c->handle, c->fd);
     printf("Listening on port %d\n", c->fd);
     c->handle.data = c;
@@ -692,6 +722,11 @@ static int client_init(struct client *c) {
     uv_timer_init(uv_default_loop(), &c->timer);
     c->timer.data = c;
     uv_timer_start(&c->timer, timer_cb, 0, 0);
+
+    // Initialize reader callback for stdin
+    uv_poll_init(uv_default_loop(), &c->stdin_handle, 0);
+    c->stdin_handle.data = c;
+    uv_poll_start(&c->stdin_handle, UV_READABLE, stdin_read_cb);
 
     return 0;
 }
@@ -705,11 +740,9 @@ static void client_free(struct client *c) {
 int main() {
     struct client c;
 
-    // Set the seed for the random number generator
     srandom((unsigned int )timestamp());
 
     printf("client_init starting...\n");
-    // SSL and QUIC client initialization
     if (client_init(&c) != 0) {
         fprintf(stderr, "client_init() failed\n");
         exit(EXIT_FAILURE);
@@ -719,14 +752,23 @@ int main() {
     wolfSSL_Debugging_ON();
     wolfSSL_CTX_set_verify(c.ssl_ctx, WOLFSSL_VERIFY_NONE, verify_callback);
 
-    // Send a message - establishes the handshake as well
+    printf("Sending initial message...\n");
+    const char handshake_msg[] = "Hello from QUIC client!";
+    int64_t init_stream_id;
+    if (ngtcp2_conn_open_bidi_stream(c.conn, &init_stream_id, NULL) == 0) {
+        c.stream.stream_id = init_stream_id;
+        c.stream.data = (const uint8_t *)handshake_msg;
+        c.stream.datalen = sizeof(handshake_msg) - 1;
+        c.stream.nwrite = 0;
+    }
+
     if (client_write(&c) != 0) {
         fprintf(stderr, "client_write() failed.\n");
         exit(EXIT_FAILURE);
     }
+    printf("Sending initial message done. Handshake should be completed...\n");
 
     uv_run(uv_default_loop(), UV_RUN_DEFAULT);
-
     client_free(&c);
 
     return 0;
