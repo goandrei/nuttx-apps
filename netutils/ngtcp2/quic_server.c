@@ -680,6 +680,39 @@ static ngtcp2_conn *get_conn(ngtcp2_crypto_conn_ref *conn_ref) {
 
 void payload_handler(const uint8_t* data, size_t datalen) {
     printf("Received payload : %s (lenght = %d)\n", data, datalen);
+
+    const char HI[] = "HI!";
+    const char TEMP[] = "TEMP";
+    const char LED[] = "LED";
+
+    if(strncmp(data, HI, datalen) == 0) {
+        // Just say Hi!
+
+    } else if(strncmp(data, TEMP, datalen) == 0) {
+        // Display the temperature
+
+    } else if(strncmp(data, LED, datalen) == 0) {
+        // Blink the LED
+        char buffer[8];
+        int fd = open("/dev/rgbled0", O_WRONLY);
+        if(fd < 0) {
+            fprintf(stderr, "Could not open /dev/rgbled0 : %d\n", errno);
+            return;
+        }
+
+        // Red
+        snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", 255, 0, 0);
+        write(fd, buffer, 8);
+        // Green
+        snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", 0, 255, 0);
+        write(fd, buffer, 8);
+        // Blue
+        snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", 0, 0, 255);
+        write(fd, buffer, 8);
+
+        close(fd);
+
+    }
 }
 
 static int server_init(struct server *s) {
