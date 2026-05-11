@@ -20,10 +20,14 @@
  *
  ****************************************************************************/
 
+#include <nuttx/sensors/sensor.h>
+#include <nuttx/sensors/bme680.h>
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -43,56 +47,28 @@
 
 static const char server_cert_pem[] =
     "-----BEGIN CERTIFICATE-----"
-    "MIIDijCCAnICCQDbemLFsbXeZDANBgkqhkiG9w0BAQsFADCBhjELMAkGA1UEBhMC"
-    "WFgxEjAQBgNVBAgMCVN0YXRlTmFtZTERMA8GA1UEBwwIQ2l0eU5hbWUxFDASBgNV"
-    "BAoMC0NvbXBhbnlOYW1lMRswGQYDVQQLDBJDb21wYW55U2VjdGlvbk5hbWUxHTAb"
-    "BgNVBAMMFENvbW1vbk5hbWVPckhvc3RuYW1lMB4XDTI2MDUwNzE3Mjg0NloXDTM2"
-    "MDUwNDE3Mjg0NlowgYYxCzAJBgNVBAYTAlhYMRIwEAYDVQQIDAlTdGF0ZU5hbWUx"
-    "ETAPBgNVBAcMCENpdHlOYW1lMRQwEgYDVQQKDAtDb21wYW55TmFtZTEbMBkGA1UE"
-    "CwwSQ29tcGFueVNlY3Rpb25OYW1lMR0wGwYDVQQDDBRDb21tb25OYW1lT3JIb3N0"
-    "bmFtZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKuxI9s1bc5RecEF"
-    "vrxpnQADihjVQC+HHLUuzFPaUrhzfNtEIjMKXyHo4X+5vxSfRS+YZMZhQEJz8btV"
-    "ZCCApDC64HjHW5/LUL6oS5uHqp6g8P2/uHVHTk2V7t0yMOLdJg5uMIUSDiiCBold"
-    "R3AjfGM4iIgoW6SiYGeAGzUXudKXnu0Vm/uk/WUn6guX4m2vxJjygKKt/LNIMhgF"
-    "PQYawI47mTkqxe5HZsu3u2xTpmFPb5XO7jVC6jLvzbTLGlR9JqYWVcY8QFbYirZT"
-    "1RErhG/ZHgJYPKJ87TRn+Ka12dFWeUcO0fpp0tYY97P0s0ztpvZ2KD2kY1N93pV+"
-    "jw8wm8ECAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAlLfsmwo+XweOJ0HZScmL+LSt"
-    "/GHDEgpdK7Po5Sr1gLAd/n6vN2xD97F7KDbfBMd2EmJEWo8iqIWuwCHtqojjsyyT"
-    "KhRl8VMdXWhBegWU0hq3/FEB45oK/XTclTVz2csd6inHPXp8Toi1NH04FS3CFbVy"
-    "4qpl85S9sFvnpGM80Ln1WAcnAQsZHvKx2lqQyXKE2LT1YrkYXTepTpC8aAaDGENa"
-    "Lt7r2FCXsoEaZDoy/Tk4nfRXhsujvzckCkJDIp76QhF3xhd4XkAeeVjRyXSQd+M2"
-    "HifebnQ9aHnKzkl995rbbmrjbdBsxCcXC7jN07YzqsmYkk3IaGxOXpYo+N+rJw=="
+    "MIICIzCCAdWgAwIBAgIUWQpXh4IUsHphI7RQXiQCIZlX6MswBQYDK2VwMIGGMQsw"
+    "CQYDVQQGEwJYWDESMBAGA1UECAwJU3RhdGVOYW1lMREwDwYDVQQHDAhDaXR5TmFt"
+    "ZTEUMBIGA1UECgwLQ29tcGFueU5hbWUxGzAZBgNVBAsMEkNvbXBhbnlTZWN0aW9u"
+    "TmFtZTEdMBsGA1UEAwwUQ29tbW9uTmFtZU9ySG9zdG5hbWUwHhcNMjYwNTExMTcy"
+    "ODA0WhcNMzYwNTA4MTcyODA0WjCBhjELMAkGA1UEBhMCWFgxEjAQBgNVBAgMCVN0"
+    "YXRlTmFtZTERMA8GA1UEBwwIQ2l0eU5hbWUxFDASBgNVBAoMC0NvbXBhbnlOYW1l"
+    "MRswGQYDVQQLDBJDb21wYW55U2VjdGlvbk5hbWUxHTAbBgNVBAMMFENvbW1vbk5h"
+    "bWVPckhvc3RuYW1lMCowBQYDK2VwAyEAmmV7+VNkWWPAyzZtPyKw+4vQbwT+GKlx"
+    "8kN4MScHKCOjUzBRMB0GA1UdDgQWBBTGKgODptL50SROgoW0FkMkwPVKlDAfBgNV"
+    "HSMEGDAWgBTGKgODptL50SROgoW0FkMkwPVKlDAPBgNVHRMBAf8EBTADAQH/MAUG"
+    "AytlcANBAAhlx0Z0fQs7O9n2QjBkUB0MD1QjuLtZDGMMLAQfnxi9LgsLTv1r7Wp+"
+    "o1qD8Jg0T2xp9sqHo2V4YeGCLOSzZQQ="
     "-----END CERTIFICATE-----";
 
 static const char server_key_pem[] =
     "-----BEGIN PRIVATE KEY-----"
-    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCrsSPbNW3OUXnB"
-    "Bb68aZ0AA4oY1UAvhxy1LsxT2lK4c3zbRCIzCl8h6OF/ub8Un0UvmGTGYUBCc/G7"
-    "VWQggKQwuuB4x1ufy1C+qEubh6qeoPD9v7h1R05Nle7dMjDi3SYObjCFEg4oggaJ"
-    "XUdwI3xjOIiIKFukomBngBs1F7nSl57tFZv7pP1lJ+oLl+Jtr8SY8oCirfyzSDIY"
-    "BT0GGsCOO5k5KsXuR2bLt7tsU6ZhT2+Vzu41Quoy7820yxpUfSamFlXGPEBW2Iq2"
-    "U9URK4Rv2R4CWDyifO00Z/imtdnRVnlHDtH6adLWGPez9LNM7ab2dig9pGNTfd6V"
-    "fo8PMJvBAgMBAAECggEAfPyWarUJe8GqTc793DFSPrlU5eEQOck1J9yqmHx97ZL9"
-    "GK4P63IocQoUZqP0q3GKryxUaGpRmk7HciWmn1amsGbKlIIkfD5JSJJBgDaSCaqF"
-    "5WOVR6MiKK72VYZ9Ohnd43Fp1uWe8vQ9B/Ck2cire5ujIOOoW0Btx8rlg5ADEX9n"
-    "z2VQJq/lMedXQ5Vo9UKAEQht8J/FAUlEJCjtoIXPMZltFT+N8XAB3hD4hBM33+2/"
-    "LAzPIrw7rRu7T4eV7pQ/bPA8l+11OtXR1ppceXWfvPe4s4bVSJumM/fAhjrKCjSK"
-    "zIwKF9lbzn0Z25Ueo+g6fuDxqLLfyoZEhtI43MWa8QKBgQDR46c2nsogZjNJPWNx"
-    "3DUGCaPeSabeeHx5iWICoG9Fklp8jw/7L5VkVgU+KH85dwkytbf14LNALdgPW4wm"
-    "jjyMIYitBoSdoh5EUTivLAONmzzZ20VFp/YEjpyb5S5Mk9ZJRBRW93LWzW5piYgj"
-    "Fha1PAoHuRN2tr2JPg+U1aEi/QKBgQDRaTzyUu7maKImB5FTRb5C485eY4klS9S4"
-    "+TKrZlq1pu3UrYOQlvd9lEBWkkvWcH4k6ZkfmaOr1kt7/NHIARJuKD2oGqcAI+L4"
-    "sInNbdnYzMo15OpcvsdIuFmLWm2YeJTFXrbQQ9issewTd1lmkHHkY1p/TWhUMVvM"
-    "Wx2nc3jBFQKBgB3GTsVH12KrPOFJ7R6M35TAr1dsWVi7/OR84cN/oOlcrqt23AyF"
-    "HotCTLIZqpqrUUm5T6R4wNT86+aZ1RLvIJW8eBgbkZqPEf4dC46GDub6u7IoEfak"
-    "shjJZlwTMfM5EbAJEV2Y8tiYAe7EzOQ1UPla0A1yatlvaQncHPe/KoG9AoGBAI6z"
-    "CwAKOZezB4OotoQrS3qjZ/Z0F3nd0ch2r+uSpQ+SABFkZ/n4lg/yHWGg8aLgJ2WZ"
-    "9WlONfUb43ZLEt0atedw7osGFnUG/1z+V/kv+To+WzEcnAO1UXGhhgtrBLHYwXA5"
-    "mZQUF6ue1sNxGe/FUIcUmQ+UvRpaRDbehDeefVP9AoGAL9qC6qvKWxa1ycps0u2o"
-    "xL+eW8Ku0sEhcgc9S53DJO+gTvZ8796krTRJHstkHypO3wbkiRr1GKLo7kO4u9M1"
-    "+B6Fzwpfla5A21SUZkD0EilhfcUy5Y/1VmER9ZUb5eEwDvdEn2/PHA9Av7iDcIuV"
-    "myLH6ZgpqtoBTtb4FlDfpPQ="
+    "MC4CAQAwBQYDK2VwBCIEIA4VsYC/+uSyW1tq8u/0C7Vv6QRiwdWA+CDwvIciWoDM"
     "-----END PRIVATE KEY-----";
+
+int baro_fd = -1;
+int hum_fd = -1;
+int gas_fd = -1;
 
 struct server {
     ngtcp2_crypto_conn_ref conn_ref;
@@ -118,7 +94,7 @@ struct server {
 
     ngtcp2_ccerr last_error;
 
-    void (*on_payload)(const uint8_t *data, size_t datalen);
+    void (*on_payload)(struct server *s, const uint8_t *data, size_t datalen);
 
     uv_poll_t handle;
     uv_timer_t timer;
@@ -295,7 +271,7 @@ static int server_recv_stream_data(ngtcp2_conn *conn,
     }
 
     if (s->on_payload) {
-        s->on_payload(data, datalen);
+        s->on_payload(s, data, datalen);
     }
 
     printf("Server received %zu bytes on stream %" PRId64 "\n", datalen, stream_id);
@@ -317,10 +293,13 @@ static int server_stream_close(ngtcp2_conn *conn,
         s->stream.buf[s->stream.nread] = '\0';
         printf("Stream %" PRId64 " closed. Received data: %s\n",
                stream_id, s->stream.buf);
+
+        if (s->stream.buflen == 0) {
+            memcpy(s->stream.buf, (const uint8_t *)RESPONSE, sizeof(RESPONSE) - 1);
+            s->stream.buflen = sizeof(RESPONSE) - 1;
+        }
+
         s->stream_closed = 1;
-        
-        memcpy(s->stream.buf, (const uint8_t *)RESPONSE, sizeof(RESPONSE) - 1);
-        s->stream.buflen = sizeof(RESPONSE) - 1;
     }
 
     return 0;
@@ -431,16 +410,17 @@ static int server_send_packet(struct server *s, const uint8_t *data,
         return -1;
     }
 
-    printf("Server sent %zd bytes\n", nwrite);
+    printf("Server sent %zd\n", nwrite);
     return 0;
 }
 
 static size_t server_get_message(struct server *s, int64_t *pstream_id,
                                  int *pfin, ngtcp2_vec *datav) {
-    if (s->stream_closed && s->stream.nwrite < s->stream.buflen) {
+    if ((s->stream_closed || s->stream.buflen > 0) && s->stream.nwrite < s->stream.buflen) {
         *pstream_id = s->stream.stream_id;
-        *pfin = 1;
+        //*pfin = 1;
         datav->base = (uint8_t *)s->stream.buf + s->stream.nwrite;
+        printf("---- Sending %s (len %d)\n", s->stream.buf, s->stream.nwrite);
         datav->len = s->stream.buflen - s->stream.nwrite;
         return 1;
     }
@@ -481,6 +461,25 @@ static int server_write_streams(struct server *s) {
             s->stream.nwrite += (size_t)wdatalen;
             continue;
         } else if (nwrite < 0) {
+            if (nwrite == NGTCP2_ERR_STREAM_NOT_FOUND ||
+                nwrite == NGTCP2_ERR_STREAM_DATA_BLOCKED ||
+                nwrite == NGTCP2_ERR_STREAM_SHUT_WR) {
+                nwrite = ngtcp2_conn_writev_stream(s->conn, &ps.path, &pi,
+                                                   buf, sizeof(buf),
+                                                   &wdatalen, 0, -1, NULL,
+                                                   0, ts);
+                if (nwrite < 0) {
+                    fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
+                            ngtcp2_strerror((int)nwrite));
+                    ngtcp2_ccerr_set_liberr(&s->last_error, (int)nwrite, NULL, 0);
+                    return -1;
+                }
+                if (nwrite > 0 &&
+                    server_send_packet(s, buf, (size_t)nwrite) != 0) {
+                    return -1;
+                }
+                return 0;
+            }
             fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
                     ngtcp2_strerror((int)nwrite));
             ngtcp2_ccerr_set_liberr(&s->last_error, (int)nwrite, NULL, 0);
@@ -678,41 +677,84 @@ static ngtcp2_conn *get_conn(ngtcp2_crypto_conn_ref *conn_ref) {
     return s->conn;
 }
 
-void payload_handler(const uint8_t* data, size_t datalen) {
-    printf("Received payload : %s (lenght = %d)\n", data, datalen);
+void payload_handler(struct server *s, const uint8_t* data, size_t datalen) {
+    printf("Received payload : %s (length = %d)\n", data, datalen);
 
     const char HI[] = "HI!";
     const char TEMP[] = "TEMP";
+    const char HUM[] = "HUM";
+    const char GAS[] = "GAS";
     const char LED[] = "LED";
 
     if(strncmp(data, HI, datalen) == 0) {
-        // Just say Hi!
-
+        s->stream.buflen = snprintf((char *)s->stream.buf,
+                          sizeof(s->stream.buf), "HI!");
     } else if(strncmp(data, TEMP, datalen) == 0) {
-        // Display the temperature
-
+        struct sensor_baro sensor;
+        int ret = read(baro_fd, &sensor, sizeof(sensor));
+        if(ret != sizeof(sensor)) {
+            fprintf(stderr, "reading from sensor_baro not returning enough\n");
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf), "ERROR: temp read failed");
+        } else {
+            printf("temp = %f pressure = %f\n", sensor.temperature, sensor.pressure);
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf),
+                              "temp=%.2f pressure=%.2f",
+                              sensor.temperature, sensor.pressure);
+        }
+    } else if(strncmp(data, HUM, datalen) == 0) {
+        struct sensor_humi sensor;
+        int ret = read(hum_fd, &sensor, sizeof(sensor));
+        if(ret != sizeof(sensor)) {
+            fprintf(stderr, "reading from sensor_humi not returning enough\n");
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf), "ERROR: hum read failed");
+        } else {
+            printf("hum = %f\n", sensor.humidity);
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf), "hum=%.2f",
+                              sensor.humidity);
+        }
+    } else if(strncmp(data, GAS, datalen) == 0) {
+        struct sensor_gas sensor;
+        int ret = read(gas_fd, &sensor, sizeof(sensor));
+        if(ret != sizeof(sensor)) {
+            fprintf(stderr, "reading from sensor_gas not returning enough\n");
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf), "ERROR: gas read failed");
+        } else {
+            printf("gas = %f\n", sensor.gas_resistance);
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf), "gas=%.2f",
+                              sensor.gas_resistance);
+        }
     } else if(strncmp(data, LED, datalen) == 0) {
-        // Blink the LED
         char buffer[8];
         int fd = open("/dev/rgbled0", O_WRONLY);
         if(fd < 0) {
             fprintf(stderr, "Could not open /dev/rgbled0 : %d\n", errno);
+            s->stream.buflen = snprintf((char *)s->stream.buf,
+                              sizeof(s->stream.buf), "ERROR: LED open failed");
             return;
         }
 
-        // Red
         snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", 255, 0, 0);
         write(fd, buffer, 8);
-        // Green
         snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", 0, 255, 0);
         write(fd, buffer, 8);
-        // Blue
         snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", 0, 0, 255);
         write(fd, buffer, 8);
 
         close(fd);
-
+        s->stream.buflen = snprintf((char *)s->stream.buf,
+                          sizeof(s->stream.buf), "LED OK");
+    } else {
+        s->stream.buflen = snprintf((char *)s->stream.buf,
+                          sizeof(s->stream.buf), "ERROR: unknown command");
     }
+
+    s->stream.nwrite = 0;
 }
 
 static int server_init(struct server *s) {
@@ -797,6 +839,51 @@ static int decode_transport_params_new(ngtcp2_conn *conn,
     return 0;
 }
 
+int init_sensors() {
+
+    struct bme680_config_s config;
+    int ret;
+
+    baro_fd = open("/dev/uorb/sensor_baro0", O_RDONLY | O_NONBLOCK);
+    if (baro_fd < 0) {
+        fprintf(stderr, "could not open /dev/uorb/sensor_baro0\n");
+        return -1;
+    }
+
+    hum_fd = open("/dev/uorb/sensor_humi0", O_RDONLY | O_NONBLOCK);
+    if (hum_fd < 0) {
+        fprintf(stderr, "could not open /dev/uorb/sensor_humi0\n");
+        return -1;
+    }
+
+    gas_fd = open("/dev/uorb/sensor_gas0", O_RDONLY | O_NONBLOCK);
+    if (gas_fd < 0) {
+        fprintf(stderr, "could not open /dev/uorb/sensor_gas0\n");
+        return -1;
+    }
+
+    /* Set oversampling */
+    config.temp_os = BME680_OS_2X;
+    config.press_os = BME680_OS_16X;
+    config.filter_coef = BME680_FILTER_COEF3;
+    config.hum_os = BME680_OS_1X;
+
+    /* Set heater parameters */
+    config.target_temp = 300;     /* degrees Celsius */
+    config.amb_temp = 30;         /* degrees Celsius */
+    config.heater_duration = 100; /* milliseconds */
+
+    config.nb_conv = 0;
+
+    ret = ioctl(baro_fd, SNIOC_CALIBRATE, &config);
+    if(ret < 0) {
+        fprintf(stderr, "could not calibrate bme680\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main() {
     
     struct server s;
@@ -805,6 +892,11 @@ int main() {
     socklen_t remote_addrlen;
     ssize_t nread;
     ngtcp2_cid dcid, scid;
+
+    if(init_sensors() != 0) {
+        fprintf(stderr, "init_sensors() failed\n");
+        exit(EXIT_FAILURE);
+    }
 
     srandom((unsigned int)timestamp());
 
@@ -899,6 +991,10 @@ int main() {
     uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 
     server_free(&s);
+
+    close(baro_fd);
+    close(hum_fd);
+    close(gas_fd);
 
     return 0;
 }

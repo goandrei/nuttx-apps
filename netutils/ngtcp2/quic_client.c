@@ -397,6 +397,25 @@ static int client_write_streams(struct client *c) {
             c->stream.nwrite += (size_t)wdatalen;
             continue;
         } else if(nwrite < 0) {
+            if (nwrite == NGTCP2_ERR_STREAM_NOT_FOUND ||
+                nwrite == NGTCP2_ERR_STREAM_DATA_BLOCKED ||
+                nwrite == NGTCP2_ERR_STREAM_SHUT_WR) {
+                nwrite = ngtcp2_conn_writev_stream(c->conn, &ps.path, &pi,
+                                                   buf, sizeof(buf),
+                                                   &wdatalen, 0, -1, NULL,
+                                                   0, ts);
+                if (nwrite < 0) {
+                    fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
+                            ngtcp2_strerror((int)nwrite));
+                    ngtcp2_ccerr_set_liberr(&c->last_error, (int)nwrite, NULL, 0);
+                    return -1;
+                }
+                if (nwrite > 0 &&
+                    client_send_packet(c, buf, (size_t)nwrite) != 0) {
+                    return -1;
+                }
+                return 0;
+            }
             // TODO : We should call ngtcp2_conn_write_connection_close, but it
             // seems that it is called in client_close already, so we should be fine with this.
             fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
@@ -482,6 +501,46 @@ static void read_cb(uv_poll_t* handle, int status, int events) {
     if (client_write(c) != 0) {
         client_close(c);
     }
+}
+
+static int client_recv_stream_data(ngtcp2_conn *conn,
+                                    uint32_t flags,
+                                    int64_t stream_id,
+                                    uint64_t offset,
+                                    const uint8_t *data,
+                                    size_t datalen,
+                                    void *user_data,
+                                    void *stream_user_data) {
+    struct client *c = user_data;
+    (void)conn;
+    (void)flags;
+    (void)offset;
+    (void)stream_user_data;
+
+    printf("[stream %" PRId64 "] ", stream_id);
+    fwrite(data, 1, datalen, stdout);
+    printf("\n");
+    fflush(stdout);
+
+    return 0;
+}
+
+static int client_stream_close(ngtcp2_conn *conn,
+                                uint32_t flags,
+                                int64_t stream_id,
+                                uint64_t app_error_code,
+                                void *user_data,
+                                void *stream_user_data) {
+    struct client *c = user_data;
+    (void)conn;
+    (void)flags;
+    (void)stream_user_data;
+
+    if (stream_id == c->stream.stream_id) {
+        c->stream.stream_id = -1;
+    }
+
+    return 0;
 }
 
 static void stdin_read_cb(uv_poll_t* handle, int status, int events) {
@@ -602,6 +661,8 @@ static int client_quic_init(struct client *c,
         .decrypt = ngtcp2_crypto_decrypt_cb,
         .hp_mask = ngtcp2_crypto_hp_mask_cb,
         .recv_retry = ngtcp2_crypto_recv_retry_cb,
+        .recv_stream_data = client_recv_stream_data,
+        .stream_close = client_stream_close,
         .extend_max_local_streams_bidi = extend_max_local_streams_bidi,
         .rand = rand_cb,
         .update_key = ngtcp2_crypto_update_key_cb,
