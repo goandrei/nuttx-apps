@@ -370,7 +370,7 @@ static int client_write_streams(struct client *c) {
     ngtcp2_ssize nwrite, wdatalen;
     ngtcp2_path_storage ps;
     ngtcp2_vec datav;
-    uint8_t buf[1452]; // todo : why 1452?
+    uint8_t buf[1452];
     size_t datavcnt;
     int64_t stream_id;
     uint32_t flags;
@@ -379,59 +379,56 @@ static int client_write_streams(struct client *c) {
     ngtcp2_path_storage_zero(&ps);
 
     for(;;) {
-        // Get a message from the active stream of client
-        // todo : It seems like a single stream is supported
         datavcnt = client_get_message(c, &stream_id, &fin, &datav);
+	printf("got message for stream id = %d fin = %d\n", stream_id, fin);
+	
+        if (datavcnt == 0) {
+            nwrite = ngtcp2_conn_writev_stream(c->conn, &ps.path, &pi,
+                                               buf, sizeof(buf),
+                                               &wdatalen, 0, -1, NULL,
+                                               0, ts);
+            if (nwrite < 0) {
+                fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
+                        ngtcp2_strerror((int)nwrite));
+                ngtcp2_ccerr_set_liberr(&c->last_error, (int)nwrite, NULL, 0);
+                return -1;
+            }
+            if (nwrite > 0 &&
+                client_send_packet(c, buf, (size_t)nwrite) != 0) {
+                return -1;
+            }
+            return 0;
+        }
 
-        // More data might come and it should be coalesced in the same packet if possible.
         flags = NGTCP2_WRITE_STREAM_FLAG_MORE;
-        if(fin)
-            // A passed data is the final part of a stream.
+        if (fin) {
             flags |= NGTCP2_WRITE_STREAM_FLAG_FIN;
+        }
 
-        nwrite = ngtcp2_conn_writev_stream(c->conn, &ps.path, &pi, buf, sizeof(buf),
-                                    &wdatalen, flags, stream_id, &datav,
-                                    datavcnt, ts);
-        if(nwrite == NGTCP2_ERR_WRITE_MORE) {
-            // There is more data to be read
+        nwrite = ngtcp2_conn_writev_stream(c->conn, &ps.path, &pi, buf,
+                                           sizeof(buf), &wdatalen, flags,
+                                           stream_id, &datav, datavcnt, ts);
+        if (nwrite == NGTCP2_ERR_WRITE_MORE) {
             c->stream.nwrite += (size_t)wdatalen;
             continue;
-        } else if(nwrite < 0) {
-            if (nwrite == NGTCP2_ERR_STREAM_NOT_FOUND ||
-                nwrite == NGTCP2_ERR_STREAM_DATA_BLOCKED ||
-                nwrite == NGTCP2_ERR_STREAM_SHUT_WR) {
-                nwrite = ngtcp2_conn_writev_stream(c->conn, &ps.path, &pi,
-                                                   buf, sizeof(buf),
-                                                   &wdatalen, 0, -1, NULL,
-                                                   0, ts);
-                if (nwrite < 0) {
-                    fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
-                            ngtcp2_strerror((int)nwrite));
-                    ngtcp2_ccerr_set_liberr(&c->last_error, (int)nwrite, NULL, 0);
-                    return -1;
-                }
-                if (nwrite > 0 &&
-                    client_send_packet(c, buf, (size_t)nwrite) != 0) {
-                    return -1;
-                }
-                return 0;
-            }
-            // TODO : We should call ngtcp2_conn_write_connection_close, but it
-            // seems that it is called in client_close already, so we should be fine with this.
+        }
+
+        if (nwrite < 0) {
             fprintf(stderr, "ngtcp2_conn_writev_stream: %s\n",
                     ngtcp2_strerror((int)nwrite));
             ngtcp2_ccerr_set_liberr(&c->last_error, (int)nwrite, NULL, 0);
             return -1;
-        } else if(nwrite == 0) {
+        }
+
+        if (nwrite == 0) {
             return 0;
         }
 
-        // todo : understand what wdatalen is
         if (wdatalen > 0) {
             c->stream.nwrite += (size_t)wdatalen;
         }
 
-        if(client_send_packet(c, buf, (size_t)nwrite) != 0) {
+        if (client_send_packet(c, buf, (size_t)nwrite) != 0) {
             break;
         }
     }
@@ -478,11 +475,10 @@ static int client_write(struct client *c) {
     now = timestamp();
 
     // libuv takes milliseconds
-    uint64_t t = expiry < now ? 1e-9 : (expiry - now) / 1000;
+    uint64_t t = expiry <= now ? 0 : (expiry - now) / 1000000;
 
     uv_timer_set_repeat(&c->timer, t);
     int rv = uv_timer_again(&c->timer);
-    printf("uv_timer_again returned %d and timeout is %ul\n", rv, t);
 
     return 0;
 }
@@ -703,9 +699,10 @@ static int client_quic_init(struct client *c,
     ngtcp2_transport_params_default(&params);
 
     // The number of concurrent streams the client can create
-    params.initial_max_streams_uni = 3;
+    params.initial_max_streams_uni = 10;
     // The number of bytes that the client can transmit
     params.initial_max_stream_data_bidi_local = 128 * 1024;
+    params.initial_max_stream_data_bidi_remote = 128 * 1024;
     // The connection level flow control window
     params.initial_max_data = 1024 * 1024;
 
@@ -773,7 +770,7 @@ static int client_init(struct client *c) {
 
     // Initialize reader callback for QUIC socket
     uv_poll_init(uv_default_loop(), &c->handle, c->fd);
-    printf("Listening on port %d\n", c->fd);
+    printf("Listening on fd %d\n", c->fd);
     c->handle.data = c;
     uv_poll_start(&c->handle, UV_READABLE, read_cb);
 
@@ -816,7 +813,8 @@ int main() {
     printf("Sending initial message...\n");
     const char handshake_msg[] = "Hello from QUIC client!";
     int64_t init_stream_id;
-    if (ngtcp2_conn_open_bidi_stream(c.conn, &init_stream_id, NULL) == 0) {
+    int ret = ngtcp2_conn_open_bidi_stream(c.conn, &init_stream_id, NULL);
+    if (ret == 0) {
         c.stream.stream_id = init_stream_id;
         c.stream.data = (const uint8_t *)handshake_msg;
         c.stream.datalen = sizeof(handshake_msg) - 1;

@@ -261,8 +261,12 @@ static int server_recv_stream_data(ngtcp2_conn *conn,
     (void)offset;
     (void)stream_user_data;
 
-    if (s->stream.stream_id == -1) {
+    if (s->stream.stream_id != stream_id) {
         s->stream.stream_id = stream_id;
+        s->stream.nread = 0;
+        s->stream.nwrite = 0;
+        s->stream.buflen = 0;
+        s->stream_closed = 0;
     }
 
     if (s->stream.nread + datalen <= sizeof(s->stream.buf)) {
@@ -416,11 +420,10 @@ static int server_send_packet(struct server *s, const uint8_t *data,
 
 static size_t server_get_message(struct server *s, int64_t *pstream_id,
                                  int *pfin, ngtcp2_vec *datav) {
-    if ((s->stream_closed || s->stream.buflen > 0) && s->stream.nwrite < s->stream.buflen) {
+    if (s->stream.nwrite < s->stream.buflen) {
         *pstream_id = s->stream.stream_id;
-        //*pfin = 1;
+        *pfin = s->stream_closed;
         datav->base = (uint8_t *)s->stream.buf + s->stream.nwrite;
-        printf("---- Sending %s (len %d)\n", s->stream.buf, s->stream.nwrite);
         datav->len = s->stream.buflen - s->stream.nwrite;
         return 1;
     }
@@ -652,8 +655,8 @@ static int server_quic_init(struct server *s,
 
     ngtcp2_transport_params_default(&params);
 
-    params.initial_max_streams_uni = 3;
-    params.initial_max_streams_bidi = 3;
+    params.initial_max_streams_uni = 10;
+    params.initial_max_streams_bidi = 10;
     params.initial_max_stream_data_bidi_local = 128 * 1024;
     params.initial_max_stream_data_bidi_remote = 128 * 1024;
     params.initial_max_data = 1024 * 1024;
@@ -754,6 +757,9 @@ void payload_handler(struct server *s, const uint8_t* data, size_t datalen) {
                           sizeof(s->stream.buf), "ERROR: unknown command");
     }
 
+    // Send this response and close the stream
+    s->stream_closed = 1;
+    // Send the whole buffer we just copied as response
     s->stream.nwrite = 0;
 }
 
