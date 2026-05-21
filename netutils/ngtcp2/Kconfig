@@ -1,0 +1,37 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config NETUTILS_NGTCP2
+	bool "NGTCP2"
+	default n
+	depends on CRYPTO_WOLFSSL
+	depends on LIBUV
+	---help---
+		ngtcp2 is a C implementation of QUIC protocol based on RFC9000.
+
+if NETUTILS_NGTCP2
+
+config NGTCP2_VERSION
+	string "ngtcp2 version"
+	default "1.21.0"
+
+config NETUTILS_NGTCP2_EXAMPLE
+	tristate "Example http3 server and client"
+	imply CONFIG_LIBUV
+	default n
+
+if NETUTILS_NGTCP2_EXAMPLE
+
+config NETUTILS_NGTCP2_EXAMPLE_PRIORITY
+	int "ngtcp2 example priority"
+	default 100
+
+config NETUTILS_NGTCP2_EXAMPLE_STACKSIZE
+	int "ngtcp2 example stacksize"
+	default 2048
+
+endif # NETUTILS_NGTCP2_EXAMPLE
+
+endif # NETUTILS_NGTCP2
