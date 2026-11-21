@@ -17,4 +17,30 @@ config NETUTILS_NGTCP2_VERSION
 	string "QUIC - ngtcp2 version"
 	default "1.21.0"
 
+config NETUTILS_NGTCP2_CLIENT
+	bool "Build ngtcp2 QUIC client example"
+	default n
+	depends on NETUTILS_NGTCP2
+	---help---
+		Build the ngtcp2 QUIC client example.
+
+config NETUTILS_NGTCP2_SERVER
+	bool "Build ngtcp2 QUIC server example"
+	default n
+	depends on NETUTILS_NGTCP2
+	---help---
+		Build the ngtcp2 QUIC server example.
+
+if NETUTILS_NGTCP2_CLIENT || NETUTILS_NGTCP2_SERVER
+
+config NETUTILS_NGTCP2_EXAMPLE_PRIORITY
+	int "ngtcp2 example priority"
+	default 100
+
+config NETUTILS_NGTCP2_EXAMPLE_STACKSIZE
+	int "ngtcp2 example stacksize"
+	default 2048
+
+endif # NETUTILS_NGTCP2_CLIENT || NETUTILS_NGTCP2_SERVER
+
 endif # NETUTILS_NGTCP2

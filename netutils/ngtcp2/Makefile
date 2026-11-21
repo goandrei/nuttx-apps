@@ -111,4 +111,21 @@ distclean::
 
 context:: $(NGTCP2_UNPACKNAME)
 
+# ngtcp2 example applications
+ifeq ($(CONFIG_NETUTILS_NGTCP2_CLIENT),y)
+PROGNAME += quic_client
+MAINSRC += quic_client.c
+endif
+
+ifeq ($(CONFIG_NETUTILS_NGTCP2_SERVER),y)
+PROGNAME += quic_server
+MAINSRC += quic_server.c
+endif
+
+ifneq ($(PROGNAME),)
+PRIORITY = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY)
+STACKSIZE = $(CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE)
+endif
+
+
 include $(APPDIR)/Application.mk

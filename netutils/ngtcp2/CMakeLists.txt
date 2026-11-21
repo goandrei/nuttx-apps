@@ -112,4 +112,24 @@ if(CONFIG_NETUTILS_NGTCP2)
             ${NGTCP2_DIR}/lib/ngtcp2_conn_info.c
             ${NGTCP2_DIR}/crypto/shared.c
             ${NGTCP2_DIR}/crypto/wolfssl/wolfssl.c)
+
+  if(CONFIG_NETUTILS_NGTCP2_CLIENT)
+    nuttx_add_application(
+      NAME quic_client
+      SRCS ${CMAKE_CURRENT_LIST_DIR}/quic_client.c
+      INCLUDE_DIRECTORIES ${NGTCP2_INCDIR}
+      COMPILE_FLAGS ${NGTCP2_FLAGS}
+      STACKSIZE ${CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE}
+      PRIORITY ${CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY})
+  endif()
+
+  if(CONFIG_NETUTILS_NGTCP2_SERVER)
+    nuttx_add_application(
+      NAME quic_server
+      SRCS ${CMAKE_CURRENT_LIST_DIR}/quic_server.c
+      INCLUDE_DIRECTORIES ${NGTCP2_INCDIR}
+      COMPILE_FLAGS ${NGTCP2_FLAGS}
+      STACKSIZE ${CONFIG_NETUTILS_NGTCP2_EXAMPLE_STACKSIZE}
+      PRIORITY ${CONFIG_NETUTILS_NGTCP2_EXAMPLE_PRIORITY})
+  endif()
 endif()
